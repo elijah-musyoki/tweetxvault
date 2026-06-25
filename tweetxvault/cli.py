@@ -10,7 +10,7 @@ import subprocess
 import sys
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -109,6 +109,23 @@ SYNC_SKIP_ARTICLES_HELP = "Skip automatic article-body refresh after sync."
 SYNC_SKIP_MEDIA_HELP = "Skip automatic media downloads after sync."
 SYNC_SKIP_UNFURL_HELP = "Skip automatic URL unfurls after sync."
 SYNC_SKIP_THREADS_HELP = "Skip automatic thread expansion after sync."
+SYNC_SINCE_HELP = (
+    "Only sync tweets newer than this date. Accepts YYYY-MM-DD or relative"
+    " shorthand like 6m, 30d, 2w."
+)
+
+
+def _parse_since(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    m = re.match(r"^(\d+)([mwd])$", value.lower())
+    if m:
+        n, unit = int(m.group(1)), m.group(2)
+        delta = {"m": timedelta(days=30 * n), "w": timedelta(weeks=n), "d": timedelta(days=n)}[unit]
+        return datetime.now(UTC) - delta
+    return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC)
+
+
 SYNC_BROWSER_OPTION = Annotated[str | None, typer.Option("--browser", help=BROWSER_HELP)]
 SYNC_PROFILE_OPTION = Annotated[
     str | None,
@@ -515,6 +532,7 @@ def _run_sync_all_command(
     skip_media: bool,
     skip_unfurl: bool,
     skip_threads: bool,
+    since: datetime | None = None,
 ) -> None:
     followups = _sync_followup_plan(
         skip_enrich=skip_enrich,
@@ -537,6 +555,7 @@ def _run_sync_all_command(
             auth_bundle=auth_bundle,
             console=runner_console,
             followups=followups,
+            since=since,
         ),
     )
     for result in outcome.results:
@@ -567,6 +586,10 @@ def sync_default(
     skip_media: SYNC_SKIP_MEDIA_OPTION = False,
     skip_unfurl: SYNC_SKIP_UNFURL_OPTION = False,
     skip_threads: SYNC_SKIP_THREADS_OPTION = False,
+    since: Annotated[
+        str | None,
+        typer.Option("--since", help=SYNC_SINCE_HELP),
+    ] = None,
 ) -> None:
     if ctx.invoked_subcommand is not None:
         return
@@ -584,6 +607,7 @@ def sync_default(
         skip_media=skip_media,
         skip_unfurl=skip_unfurl,
         skip_threads=skip_threads,
+        since=_parse_since(since),
     )
 
 
@@ -611,6 +635,10 @@ def _register_sync_collection_command(collection: str):
         skip_media: SYNC_SKIP_MEDIA_OPTION = False,
         skip_unfurl: SYNC_SKIP_UNFURL_OPTION = False,
         skip_threads: SYNC_SKIP_THREADS_OPTION = False,
+        since: Annotated[
+            str | None,
+            typer.Option("--since", help=SYNC_SINCE_HELP),
+        ] = None,
     ) -> None:
         followups = _sync_followup_plan(
             skip_enrich=skip_enrich,
@@ -634,6 +662,7 @@ def _register_sync_collection_command(collection: str):
                 auth_bundle=auth_bundle,
                 console=runner_console,
                 followups=followups,
+                since=_parse_since(since),
             ),
         )
         console.print(
@@ -896,6 +925,10 @@ def sync_tweets(
             help="Fetch tweets from this user ID instead of the authenticated user.",
         ),
     ] = None,
+    since: Annotated[
+        str | None,
+        typer.Option("--since", help=SYNC_SINCE_HELP),
+    ] = None,
 ) -> None:
     if user_id is not None and not user_id.isdigit():
         raise typer.BadParameter("--user-id must be a numeric user ID")
@@ -922,6 +955,7 @@ def sync_tweets(
             console=runner_console,
             followups=followups,
             target_user_id=user_id,
+            since=_parse_since(since),
         ),
     )
     console.print(
@@ -947,6 +981,10 @@ def sync_everything(
     skip_media: SYNC_SKIP_MEDIA_OPTION = False,
     skip_unfurl: SYNC_SKIP_UNFURL_OPTION = False,
     skip_threads: SYNC_SKIP_THREADS_OPTION = False,
+    since: Annotated[
+        str | None,
+        typer.Option("--since", help=SYNC_SINCE_HELP),
+    ] = None,
 ) -> None:
     _run_sync_all_command(
         full=full,
@@ -962,6 +1000,7 @@ def sync_everything(
         skip_media=skip_media,
         skip_unfurl=skip_unfurl,
         skip_threads=skip_threads,
+        since=_parse_since(since),
     )
 
 

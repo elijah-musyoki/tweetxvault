@@ -659,6 +659,7 @@ def test_sync_bookmarks_forwards_article_backfill(paths, monkeypatch) -> None:
         console=None,
         followups=None,
         target_user_id=None,
+        since=None,
     ):
         forwarded.update(
             {
@@ -713,6 +714,7 @@ def test_sync_likes_forwards_article_backfill(paths, monkeypatch) -> None:
         console=None,
         followups=None,
         target_user_id=None,
+        since=None,
     ):
         forwarded.update(
             {
@@ -767,6 +769,7 @@ def test_sync_tweets_forwards_article_backfill(paths, monkeypatch) -> None:
         console=None,
         followups=None,
         target_user_id=None,
+        since=None,
     ):
         forwarded.update(
             {
@@ -819,6 +822,7 @@ def test_sync_all_forwards_article_backfill(paths, monkeypatch) -> None:
         auth_bundle=None,
         console=None,
         followups=None,
+        since=None,
     ):
         forwarded.update(
             {
@@ -877,6 +881,7 @@ def test_sync_default_runs_sync_all_with_full_followups(paths, monkeypatch) -> N
         auth_bundle=None,
         console=None,
         followups=None,
+        since=None,
     ):
         forwarded.update(
             {
@@ -937,6 +942,7 @@ def test_sync_default_skip_flags_disable_selected_followups(paths, monkeypatch) 
         auth_bundle=None,
         console=None,
         followups=None,
+        since=None,
     ):
         forwarded["followups"] = followups
         return SimpleNamespace(results=[], errors={}, exit_code=0)
@@ -976,6 +982,7 @@ def test_sync_likes_forwards_head_only(paths, monkeypatch) -> None:
         console=None,
         followups=None,
         target_user_id=None,
+        since=None,
     ):
         forwarded.update(
             {

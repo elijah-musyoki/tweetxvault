@@ -6,6 +6,7 @@ import asyncio
 import fcntl
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -339,6 +340,7 @@ async def _run_pass(
     client: httpx.AsyncClient,
     write_tracker: ArchiveWriteTracker,
     target_user_id: str | None = None,
+    since: datetime | None = None,
 ) -> tuple[int, int, str, str | None, str | None]:
     pages_fetched = 0
     tweets_seen = 0
@@ -373,8 +375,21 @@ async def _run_pass(
         if is_head_pass and tweets and pages_fetched == 0:
             latest_head_id = tweets[0].tweet_id
 
+        past_cutoff = False
+        if since and tweets:
+            last = tweets[-1]
+            if last.created_at:
+                try:
+                    created = datetime.strptime(last.created_at, "%a %b %d %H:%M:%S %z %Y")
+                    if created < since:
+                        past_cutoff = True
+                except ValueError:
+                    pass
+
         if not tweets:
             stop_reason = "empty"
+        elif past_cutoff:
+            stop_reason = "since-cutoff"
         elif duplicate_seen:
             stop_reason = "duplicate"
         elif next_cursor is None:
@@ -445,6 +460,7 @@ async def sync_collection(
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     followups: SyncFollowupPlan | None = None,
     target_user_id: str | None = None,
+    since: datetime | None = None,
 ) -> SyncResult:
     if config is None or paths is None:
         loaded_config, loaded_paths = load_config()
@@ -477,6 +493,7 @@ async def sync_collection(
         console=console,
         sleep=sleep,
         target_user_id=target_user_id,
+        since=since,
     )
     if followups is not None and followups.enabled:
         await _run_auto_followups(
@@ -783,6 +800,7 @@ async def _sync_collection_ready(
     console: Console,
     sleep: Callable[[float], Awaitable[None]],
     target_user_id: str | None = None,
+    since: datetime | None = None,
 ) -> SyncResult:
     probe = preflight.probes[collection]
     if not probe.ready:
@@ -860,6 +878,7 @@ async def _sync_collection_ready(
                     client=client,
                     write_tracker=write_tracker,
                     target_user_id=target_user_id,
+                    since=since,
                 )
                 pages_total = head_pages
                 tweets_total = head_tweets
@@ -906,6 +925,7 @@ async def _sync_collection_ready(
                         client=client,
                         write_tracker=write_tracker,
                         target_user_id=target_user_id,
+                        since=since,
                     )
                     pages_total += backfill_pages
                     tweets_total += backfill_tweets
@@ -954,6 +974,7 @@ async def sync_all(
     console: Console | None = None,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     followups: SyncFollowupPlan | None = None,
+    since: datetime | None = None,
 ) -> SyncAllResult:
     if config is None or paths is None:
         loaded_config, loaded_paths = load_config()
@@ -991,6 +1012,7 @@ async def sync_all(
                 transport=transport,
                 console=console,
                 sleep=sleep,
+                since=since,
             )
             results.append(result)
         except TweetXVaultError as exc:
