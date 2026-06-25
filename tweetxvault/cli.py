@@ -869,7 +869,65 @@ def _highlight_search_matches(text: str, query: str) -> Text:
 
 sync_bookmarks = _register_sync_collection_command("bookmarks")
 sync_likes = _register_sync_collection_command("likes")
-sync_tweets = _register_sync_collection_command("tweets")
+
+
+@sync_app.command("tweets", help="Sync authored tweets.")
+def sync_tweets(
+    full: Annotated[bool, typer.Option("--full", help=SYNC_FULL_HELP)] = False,
+    backfill: Annotated[
+        bool,
+        typer.Option("--backfill", help=SYNC_BACKFILL_HELP),
+    ] = False,
+    article_backfill: SYNC_ARTICLE_BACKFILL_OPTION = False,
+    head_only: SYNC_HEAD_ONLY_OPTION = False,
+    limit: Annotated[int | None, typer.Option("--limit", help=SYNC_LIMIT_HELP)] = None,
+    browser: SYNC_BROWSER_OPTION = None,
+    profile: SYNC_PROFILE_OPTION = None,
+    profile_path: SYNC_PROFILE_PATH_OPTION = None,
+    skip_enrich: SYNC_SKIP_ENRICH_OPTION = False,
+    skip_articles: SYNC_SKIP_ARTICLES_OPTION = False,
+    skip_media: SYNC_SKIP_MEDIA_OPTION = False,
+    skip_unfurl: SYNC_SKIP_UNFURL_OPTION = False,
+    skip_threads: SYNC_SKIP_THREADS_OPTION = False,
+    user_id: Annotated[
+        str | None,
+        typer.Option(
+            "--user-id",
+            help="Fetch tweets from this user ID instead of the authenticated user.",
+        ),
+    ] = None,
+) -> None:
+    if user_id is not None and not user_id.isdigit():
+        raise typer.BadParameter("--user-id must be a numeric user ID")
+    followups = _sync_followup_plan(
+        skip_enrich=skip_enrich,
+        skip_articles=skip_articles,
+        skip_media=skip_media,
+        skip_unfurl=skip_unfurl,
+        skip_threads=skip_threads,
+    )
+    console, result = _run_sync_command(
+        browser=browser,
+        profile=profile,
+        profile_path=profile_path,
+        runner=lambda config, auth_bundle, runner_console: sync_collection(
+            "tweets",
+            full=full,
+            backfill=backfill,
+            article_backfill=article_backfill,
+            head_only=head_only,
+            limit=limit,
+            config=config,
+            auth_bundle=auth_bundle,
+            console=runner_console,
+            followups=followups,
+            target_user_id=user_id,
+        ),
+    )
+    console.print(
+        f"tweets: {result.pages_fetched} pages, {result.tweets_seen} tweets, "
+        f"{result.stop_reason}"
+    )
 
 
 @sync_app.command("all", help=SYNC_ALL_HELP)

@@ -138,13 +138,20 @@ class ProcessLock:
 
 
 def _build_url(
-    collection: str, query_id: str, auth: ResolvedAuthBundle, cursor: str | None, count: int
+    collection: str,
+    query_id: str,
+    auth: ResolvedAuthBundle,
+    cursor: str | None,
+    count: int,
+    *,
+    target_user_id: str | None = None,
 ) -> str:
     if collection == "bookmarks":
         return build_bookmarks_url(query_id, cursor=cursor, count=count)
+    user_id = target_user_id or auth.user_id or ""
     if collection == "likes":
-        return build_likes_url(query_id, auth.user_id or "", cursor=cursor, count=count)
-    return build_user_tweets_url(query_id, auth.user_id or "", cursor=cursor, count=count)
+        return build_likes_url(query_id, user_id, cursor=cursor, count=count)
+    return build_user_tweets_url(query_id, user_id, cursor=cursor, count=count)
 
 
 async def run_preflight(
@@ -155,6 +162,7 @@ async def run_preflight(
     auth_bundle: ResolvedAuthBundle | None = None,
     query_ids: dict[str, str] | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
+    target_user_id: str | None = None,
 ) -> PreflightResult:
     auth_bundle = auth_bundle or resolve_auth_bundle(config)
     existing_store = open_archive_store(paths, create=False)
@@ -208,12 +216,20 @@ async def run_preflight(
                     auth_bundle,
                     None,
                     1,
+                    target_user_id=target_user_id,
                 )
 
             try:
                 response = await fetch_page(
                     client,
-                    _build_url(collection, query_ids[operation], auth_bundle, None, 1),
+                    _build_url(
+                        collection,
+                        query_ids[operation],
+                        auth_bundle,
+                        None,
+                        1,
+                        target_user_id=target_user_id,
+                    ),
                     config.sync,
                     refresh_once=refresh_once,
                 )
@@ -248,15 +264,30 @@ async def _fetch_and_parse_page(
     query_store: QueryIdStore,
     query_ids: dict[str, str],
     client: httpx.AsyncClient,
+    target_user_id: str | None = None,
 ) -> tuple[httpx.Response, dict[str, Any], list[TimelineTweet], str | None]:
     operation = COLLECTION_TO_OPERATION[collection]
 
     async def refresh_once() -> str:
         refreshed = await refresh_query_ids(query_store, operations=[operation], client=client)
         query_ids.update(refreshed)
-        return _build_url(collection, query_ids[operation], auth, cursor, count)
+        return _build_url(
+            collection,
+            query_ids[operation],
+            auth,
+            cursor,
+            count,
+            target_user_id=target_user_id,
+        )
 
-    url = _build_url(collection, query_ids[operation], auth, cursor, count)
+    url = _build_url(
+        collection,
+        query_ids[operation],
+        auth,
+        cursor,
+        count,
+        target_user_id=target_user_id,
+    )
     response = await fetch_page(client, url, config.sync, refresh_once=refresh_once)
     payload = response.json()
     tweets, next_cursor = parse_timeline_response(payload, operation)
@@ -307,6 +338,7 @@ async def _run_pass(
     sleep: Callable[[float], Awaitable[None]],
     client: httpx.AsyncClient,
     write_tracker: ArchiveWriteTracker,
+    target_user_id: str | None = None,
 ) -> tuple[int, int, str, str | None, str | None]:
     pages_fetched = 0
     tweets_seen = 0
@@ -329,6 +361,7 @@ async def _run_pass(
             query_store=query_store,
             query_ids=query_ids,
             client=client,
+            target_user_id=target_user_id,
         )
         duplicate_seen = False
         if is_head_pass and stop_on_duplicate:
@@ -411,6 +444,7 @@ async def sync_collection(
     console: Console | None = None,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     followups: SyncFollowupPlan | None = None,
+    target_user_id: str | None = None,
 ) -> SyncResult:
     if config is None or paths is None:
         loaded_config, loaded_paths = load_config()
@@ -426,6 +460,7 @@ async def sync_collection(
         auth_bundle=auth_bundle,
         query_ids=query_ids,
         transport=transport,
+        target_user_id=target_user_id,
     )
     result = await _sync_collection_ready(
         collection=collection,
@@ -441,6 +476,7 @@ async def sync_collection(
         transport=transport,
         console=console,
         sleep=sleep,
+        target_user_id=target_user_id,
     )
     if followups is not None and followups.enabled:
         await _run_auto_followups(
@@ -746,6 +782,7 @@ async def _sync_collection_ready(
     transport: httpx.AsyncBaseTransport | None,
     console: Console,
     sleep: Callable[[float], Awaitable[None]],
+    target_user_id: str | None = None,
 ) -> SyncResult:
     probe = preflight.probes[collection]
     if not probe.ready:
@@ -822,6 +859,7 @@ async def _sync_collection_ready(
                     sleep=sleep,
                     client=client,
                     write_tracker=write_tracker,
+                    target_user_id=target_user_id,
                 )
                 pages_total = head_pages
                 tweets_total = head_tweets
@@ -867,6 +905,7 @@ async def _sync_collection_ready(
                         sleep=sleep,
                         client=client,
                         write_tracker=write_tracker,
+                        target_user_id=target_user_id,
                     )
                     pages_total += backfill_pages
                     tweets_total += backfill_tweets

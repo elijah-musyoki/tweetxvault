@@ -658,6 +658,7 @@ def test_sync_bookmarks_forwards_article_backfill(paths, monkeypatch) -> None:
         auth_bundle=None,
         console=None,
         followups=None,
+        target_user_id=None,
     ):
         forwarded.update(
             {
@@ -711,6 +712,7 @@ def test_sync_likes_forwards_article_backfill(paths, monkeypatch) -> None:
         auth_bundle=None,
         console=None,
         followups=None,
+        target_user_id=None,
     ):
         forwarded.update(
             {
@@ -764,6 +766,7 @@ def test_sync_tweets_forwards_article_backfill(paths, monkeypatch) -> None:
         auth_bundle=None,
         console=None,
         followups=None,
+        target_user_id=None,
     ):
         forwarded.update(
             {
@@ -972,6 +975,7 @@ def test_sync_likes_forwards_head_only(paths, monkeypatch) -> None:
         auth_bundle=None,
         console=None,
         followups=None,
+        target_user_id=None,
     ):
         forwarded.update(
             {
