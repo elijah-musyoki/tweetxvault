@@ -925,8 +925,7 @@ def sync_tweets(
         ),
     )
     console.print(
-        f"tweets: {result.pages_fetched} pages, {result.tweets_seen} tweets, "
-        f"{result.stop_reason}"
+        f"tweets: {result.pages_fetched} pages, {result.tweets_seen} tweets, {result.stop_reason}"
     )
 
 
@@ -1881,6 +1880,88 @@ def _raise_nofile_limit() -> None:
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
     if soft < hard:
         resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
+
+
+@app.command("fetch")
+def fetch_tweet(
+    tweet_url: Annotated[str, typer.Argument(help="Tweet URL or numeric tweet ID")],
+    browser: SYNC_BROWSER_OPTION = None,
+    profile: SYNC_PROFILE_OPTION = None,
+    profile_path: SYNC_PROFILE_PATH_OPTION = None,
+) -> None:
+    """Fetch a single tweet by URL or ID and display it."""
+    console = _configure_logging()
+
+    # Extract tweet ID from URL or plain ID
+    match = re.search(r"/status/(\d+)", tweet_url)
+    if match:
+        tweet_id = match.group(1)
+    elif tweet_url.isdigit():
+        tweet_id = tweet_url
+    else:
+        console.print("[red]Could not extract tweet ID from input.[/red]")
+        raise typer.Exit(1)
+
+    def _display_tweet(tweet: Any, *, indent: str = "") -> None:
+        console.print(
+            f"{indent}[bold]@{tweet.author_username}[/bold] ({tweet.author_display_name})"
+        )
+        console.print(f"{indent}[dim]{tweet.created_at or 'unknown date'}[/dim]\n")
+        console.print(f"{indent}{tweet.text}")
+        if tweet.raw_json.get("extended_entities", {}).get("media"):
+            media = tweet.raw_json["extended_entities"]["media"]
+            console.print(f"{indent}[dim]{len(media)} media attachment(s)[/dim]")
+
+    async def _fetch() -> None:
+        from tweetxvault.client.base import build_async_client
+        from tweetxvault.client.timelines import (
+            build_tweet_detail_url,
+            fetch_page,
+            parse_tweet_detail_tweets,
+        )
+
+        config, _ = load_config()
+        config, auth_bundle = _prepare_auth_override(
+            config, console, browser=browser, profile=profile, profile_path=profile_path
+        )
+        query_store = QueryIdStore(ensure_paths(None))
+        query_ids = await refresh_query_ids(query_store, operations=["TweetDetail"])
+        client = build_async_client(auth_bundle, timeout=config.sync.timeout)
+        try:
+            url = build_tweet_detail_url(query_ids["TweetDetail"], tweet_id)
+            response = await fetch_page(client, url, config.sync)
+            if response.status_code != 200:
+                console.print(f"[red]API returned HTTP {response.status_code}[/red]")
+                raise typer.Exit(1)
+            all_tweets = parse_tweet_detail_tweets(response.json())
+            if not all_tweets:
+                console.print("[red]Tweet not found or unavailable.[/red]")
+                raise typer.Exit(1)
+            focal = next((t for t in all_tweets if t.tweet_id == tweet_id), all_tweets[0])
+            focal_idx = focal.sort_index or ""
+            parent_tweets = [
+                t
+                for t in all_tweets
+                if t.tweet_id != tweet_id and t.sort_index and t.sort_index < focal_idx
+            ]
+            reply_tweets = [
+                t
+                for t in all_tweets
+                if t.tweet_id != tweet_id and t.sort_index and t.sort_index > focal_idx
+            ]
+            for parent in parent_tweets:
+                _display_tweet(parent)
+                console.print("\n[dim]  ↓ in reply to ↓[/dim]\n")
+            _display_tweet(focal)
+            if reply_tweets:
+                console.print("\n[dim]  ↓ replies ↓[/dim]\n")
+                for reply in reply_tweets:
+                    _display_tweet(reply, indent="  ")
+                    console.print()
+        finally:
+            await client.aclose()
+
+    asyncio.run(_fetch())
 
 
 @app.callback()
