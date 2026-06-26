@@ -187,6 +187,15 @@ uv run tweetxvault sync bookmarks
 uv run tweetxvault sync likes
 uv run tweetxvault sync tweets
 
+# Sync tweets from any public user by ID
+uv run tweetxvault sync tweets --user-id 123456789
+
+# Only sync tweets from the last 6 months
+uv run tweetxvault sync --since 6m
+
+# Only sync tweets since a specific date
+uv run tweetxvault sync --since 2025-12-25
+
 # Force a specific browser profile for this run
 uv run tweetxvault sync --browser chrome --profile "Profile 2"
 
@@ -222,6 +231,8 @@ Common sync flags:
 - `--article-backfill`: rewalk existing pages to refresh article-bearing tweets after article extraction changes.
 - `--skip-enrich`, `--skip-threads`, `--skip-articles`, `--skip-media`, `--skip-unfurl`: skip one or more automatic follow-up archive-maintenance jobs for just that sync run.
 - `--limit N`: cap the run to `N` fetched pages for debugging, sampling, or shorter catch-up runs.
+- `--since DATE`: stop syncing when tweets get older than this date. Accepts `YYYY-MM-DD` or relative shorthand like `6m`, `30d`, `2w`.
+- `--user-id ID`: (tweets only) fetch tweets from this user ID instead of the authenticated user.
 - `--browser`, `--profile`, `--profile-path`: force a specific browser/profile for cookie extraction on just that run.
 
 Backfill status markers shown by `tweetxvault stats`:
@@ -349,6 +360,18 @@ uv run tweetxvault view all --limit 50
 ```
 
 Terminal views render tweet timestamps in your local timezone. Sort order uses tweet `created_at`, not collection position. For likes, that means `uv run tweetxvault view likes --sort oldest` shows the oldest liked tweet by tweet timestamp when one is known; X does not expose a reliable `liked_at` timestamp for reconstructing the exact order in which you liked posts.
+
+### Fetching a single tweet
+
+```bash
+# Fetch by URL
+uv run tweetxvault fetch https://x.com/user/status/123456789
+
+# Fetch by tweet ID
+uv run tweetxvault fetch 123456789
+```
+
+Displays the tweet with author, date, text, and thread context (parent tweets and replies).
 
 ### Searching
 
