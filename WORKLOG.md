@@ -2,6 +2,22 @@
 
 ## 2026-07-21
 
+- Prepared release metadata for `v0.2.5`:
+  - bumped package version from `0.2.4` to `0.2.5`
+  - documented the LanceDB 0.34 / Lance 8 FTS-maintenance fix and in-place recovery path in `CHANGELOG.md` and `README.md`
+  - release validation/build commands for this cut:
+    - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check`
+    - `uv run ruff check`
+    - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q`
+    - `UV_CACHE_DIR=/tmp/uv-cache uv build`
+    - `uvx --from twine twine check dist/tweetxvault-0.2.5*`
+    - `uv run --isolated --with dist/tweetxvault-0.2.5-py3-none-any.whl tweetxvault --help`
+  - publish/verification commands for this cut:
+    - `git push origin main` and `git push origin v0.2.5`
+    - `uv publish dist/tweetxvault-0.2.5-py3-none-any.whl dist/tweetxvault-0.2.5.tar.gz`
+    - `uvx --refresh --from "tweetxvault==0.2.5" tweetxvault --help`
+    - `gh release create v0.2.5 --title "v0.2.5" --notes-file /tmp/tweetxvault-v0.2.5-notes.md --latest`
+
 - Raised the supported LanceDB floor after diagnosing a production FTS-index maintenance panic:
   - the affected environment had `lancedb` 0.33.0, whose native extension embeds Lance 7.0.0; stale persisted FTS token ids caused `ArchiveStore.optimize()` to panic while merging index segments after otherwise-successful sync writes
   - upstream Lance fixes #7115 and #7200 are included in Lance 8.0.0 and heal the stale persisted token bookkeeping when loading the existing index

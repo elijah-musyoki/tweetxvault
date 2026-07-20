@@ -92,6 +92,24 @@ uvx tweetxvault --help
 
 This installs `onnxruntime`, `tokenizers`, and `huggingface-hub`. GPU acceleration (CUDA/ROCm) is used automatically when available; CPU works fine too (~150-200 tweets/s).
 
+### Upgrading from 0.2.4 or earlier
+
+Version 0.2.5 raises the minimum LanceDB version to 0.34.0. That release embeds
+Lance 8 and includes fixes for an FTS maintenance bug that could make
+`tweetxvault optimize` panic after archive updates or deletions.
+
+Upgrade with the command matching your installation method:
+
+```bash
+pip install --upgrade "tweetxvault>=0.2.5"
+uv tool upgrade tweetxvault
+pipx upgrade tweetxvault
+```
+
+If an earlier `tweetxvault optimize` failed with an FTS index panic, rerun it
+after upgrading. The existing archive can be repaired in place; no reimport is
+required.
+
 ## Authentication
 
 tweetxvault needs your `auth_token` and `ct0` session cookies from Twitter/X. There are three ways to provide them (checked in this order):

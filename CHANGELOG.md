@@ -6,6 +6,34 @@ were backfilled from git tags and `WORKLOG.md`.
 
 The format is loosely based on Keep a Changelog.
 
+## [0.2.5] - 2026-07-21
+
+### Changed
+
+- Raised the minimum LanceDB version to 0.34.0, which embeds Lance 8.0.0 and
+  includes the upstream full-text-index maintenance fixes required by
+  `tweetxvault optimize` after archive updates and deletions.
+- Migrated full-text index creation to LanceDB's unified
+  `create_index(..., config=FTS())` API.
+- Added README upgrade and recovery guidance for archives that encountered the
+  affected Lance 7 full-text-index panic.
+
+### Fixed
+
+- Prevented `tweetxvault optimize` from resolving to affected LanceDB releases
+  whose stale persisted FTS token bookkeeping could panic while merging index
+  segments. Existing archives can be repaired in place after upgrading; no
+  archive reimport is required.
+
+### Validation
+
+- `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check`
+- `uv run ruff check`
+- `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q`
+- `UV_CACHE_DIR=/tmp/uv-cache uv build`
+- `uvx --from twine twine check dist/tweetxvault-0.2.5*`
+- `uv run --isolated --with dist/tweetxvault-0.2.5-py3-none-any.whl tweetxvault --help`
+
 ## [0.2.4] - 2026-04-23
 
 ### Added
@@ -225,6 +253,7 @@ The format is loosely based on Keep a Changelog.
 - Wheel and sdist contents inspected to confirm repo-internal files no longer
   ship in release artifacts.
 
+[0.2.5]: https://github.com/lhl/tweetxvault/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/lhl/tweetxvault/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/lhl/tweetxvault/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/lhl/tweetxvault/compare/v0.2.1...v0.2.2

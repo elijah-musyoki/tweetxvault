@@ -579,3 +579,4 @@ Follow-up maintenance work after the content-expansion milestone. Land these as 
   - Root cause: LanceDB 0.33.0 embeds Lance 7.0.0, whose stale FTS token-id bookkeeping can panic during `optimize()` after updates/deletions.
   - Landed approach: raised the project floor to `lancedb>=0.34,<1`, refreshed the lock to LanceDB 0.34.0 / Lance 8.0.0, and migrated FTS creation from deprecated `create_fts_index(...)` to the unified `create_index(..., config=FTS())` API.
   - Validation: `uv lock --check`, `uv sync --extra embed`, `uv run ruff format --check`, `uv run ruff check`, `uv run pytest -q`, and an isolated wheel build/install check; the project, global, and built-wheel environments all resolve LanceDB 0.34.0, and the full suite passes without warnings.
+  - Release: included in `v0.2.5` with README upgrade and in-place FTS recovery guidance.
