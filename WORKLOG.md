@@ -1,5 +1,17 @@
 # WORKLOG
 
+## 2026-07-21
+
+- Raised the supported LanceDB floor after diagnosing a production FTS-index maintenance panic:
+  - the affected environment had `lancedb` 0.33.0, whose native extension embeds Lance 7.0.0; stale persisted FTS token ids caused `ArchiveStore.optimize()` to panic while merging index segments after otherwise-successful sync writes
+  - upstream Lance fixes #7115 and #7200 are included in Lance 8.0.0 and heal the stale persisted token bookkeeping when loading the existing index
+  - created and validated a Btrfs reflink backup, upgraded the live environment to LanceDB 0.34.0 / Lance 8.0.0, and successfully optimized the real archive from 513,070 unindexed rows to zero without changing its 6,868,737-row count
+- Updated the project dependency graph and LanceDB 0.34 API usage:
+  - changed the runtime requirement from `lancedb>=0.29,<1` to `lancedb>=0.34,<1` and refreshed `uv.lock` from LanceDB 0.29.2 to 0.34.0
+  - migrated FTS creation from deprecated `create_fts_index(...)` to `create_index(..., config=FTS())`
+  - verified both the project and global environments resolve LanceDB 0.34.0, with Lance 8.0.0 in the LanceDB wheel
+  - validation: `uv lock --check`, `uv sync --extra embed`, `uv run ruff format --check`, `uv run ruff check`, `uv run pytest -q`, plus a fresh wheel build whose metadata requires `lancedb<1,>=0.34` and whose isolated install resolves LanceDB 0.34.0
+
 ## 2026-04-23
 
 - Backfilled GitHub Releases for every published tag so the project Releases

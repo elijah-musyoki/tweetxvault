@@ -572,3 +572,10 @@ Follow-up maintenance work after the content-expansion milestone. Land these as 
   - Landed approach: added `tweetxvault stats`, backed by a storage summary that reports overall post/article totals, per-collection counts with first/last/sync/backfill metadata, storage health including DB/media disk usage plus an optimize hint, and follow-up queues for pending archive enrichment, missing normalized tweet objects, and thread expansion work.
   - Follow-up cleanup: tightened the storage scans so the command stays fast on large archives, simplified the optimize hint to `ok` / `run optimize`, and added an in-command legend that explains the backfill labels plus the difference between archive enrich, local rehydrate gaps, and the two thread-expansion target buckets.
   - Validation: `uv run pytest -q tests/test_storage.py::test_archive_stats_summarizes_collections_and_bounds tests/test_cli.py::test_stats_archive_renders_summary_tables`.
+
+## Post-v0.2 Dependency Maintenance
+
+- [x] Require LanceDB 0.34 or newer for safe FTS index maintenance.
+  - Root cause: LanceDB 0.33.0 embeds Lance 7.0.0, whose stale FTS token-id bookkeeping can panic during `optimize()` after updates/deletions.
+  - Landed approach: raised the project floor to `lancedb>=0.34,<1`, refreshed the lock to LanceDB 0.34.0 / Lance 8.0.0, and migrated FTS creation from deprecated `create_fts_index(...)` to the unified `create_index(..., config=FTS())` API.
+  - Validation: `uv lock --check`, `uv sync --extra embed`, `uv run ruff format --check`, `uv run ruff check`, `uv run pytest -q`, and an isolated wheel build/install check; the project, global, and built-wheel environments all resolve LanceDB 0.34.0, and the full suite passes without warnings.

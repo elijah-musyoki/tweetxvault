@@ -18,6 +18,7 @@ from typing import Any
 import lancedb
 import numpy as np
 import pyarrow as pa
+from lancedb.index import FTS
 
 from tweetxvault.client.timelines import TimelineTweet, parse_tweet_detail_tweets
 from tweetxvault.config import XDGPaths
@@ -2385,7 +2386,7 @@ class ArchiveStore:
             for idx in indices
         )
         if not fts_exists:
-            self.table.create_fts_index(SEARCH_TEXT_FIELD, replace=True)
+            self.table.create_index(SEARCH_TEXT_FIELD, config=FTS(), replace=True)
 
     def _search_score(self, row: dict[str, Any]) -> float | None:
         score = row.get("match_score")
