@@ -23,6 +23,17 @@
     passes except for 3 pre-existing CLI help-text failures (Rich/Typer ANSI
     code wrapping on hyphenated option names, unrelated to this change)
 
+- Added `dev/fetch_tweet.py`: a lightweight one-shot tweet fetcher that reuses
+  tweetxvault's own `TweetDetail` GraphQL client + extractor to fetch any tweet
+  by URL or numeric ID and print its text, author, note-tweet body, media, and
+  URLs. Complements `dev/grab_article.py` (article-to-Markdown).
+- Cleaned up lint across both dev scripts (`dev/grab_article.py`,
+  `dev/fetch_tweet.py`): resolved E402 (noqa on path-manipulated imports),
+  E701 (inline statements), E501 (line length), B904 (raise from),
+  ASYNC230 (asyncio.to_thread for file writes), I001 (import sorting), and
+  removed unused imports. Full `ruff check` + `ruff format --check` now pass
+  on dev/ scripts.
+
 ## 2026-07-21
 
 - Prepared release metadata for `v0.2.5`:
