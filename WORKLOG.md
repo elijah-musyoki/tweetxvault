@@ -25,8 +25,9 @@
 
 - Added `dev/fetch_tweet.py`: a lightweight one-shot tweet fetcher that reuses
   tweetxvault's own `TweetDetail` GraphQL client + extractor to fetch any tweet
-  by URL or numeric ID and print its text, author, note-tweet body, media, and
-  URLs. Complements `dev/grab_article.py` (article-to-Markdown).
+  by URL or numeric ID and print its text, author, note-tweet body, media, URLs,
+  and full thread context (all conversation tweets from the TweetDetail response,
+  labeled as PARENT vs reply). Complements `dev/grab_article.py`.
 - Cleaned up lint across both dev scripts (`dev/grab_article.py`,
   `dev/fetch_tweet.py`): resolved E402 (noqa on path-manipulated imports),
   E701 (inline statements), E501 (line length), B904 (raise from),

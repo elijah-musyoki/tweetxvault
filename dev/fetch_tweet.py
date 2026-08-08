@@ -32,6 +32,7 @@ from tweetxvault.client.timelines import (  # noqa: E402
     build_tweet_detail_url,
     fetch_page,
     parse_tweet_detail_response,
+    parse_tweet_detail_tweets,
 )
 from tweetxvault.config import load_config  # noqa: E402
 from tweetxvault.query_ids import QueryIdStore, refresh_query_ids  # noqa: E402
@@ -113,6 +114,26 @@ async def run(tid: str, cookies_path: str | None) -> int:
         print("Text:")
         print(tweet.text)
         print()
+
+        # Show thread context if the response contains more than just the focal tweet
+        all_tweets = parse_tweet_detail_tweets(j)
+        thread_tweets = [t for t in all_tweets if t.tweet_id != tweet.tweet_id]
+        if thread_tweets:
+            print(f"=== Thread context ({len(thread_tweets)} additional tweets) ===")
+            for ct in thread_tweets:
+                ct_legacy = ct.raw_json.get("legacy") or {}
+                parent_id = ct_legacy.get("in_reply_to_status_id_str")
+                if parent_id == tweet.tweet_id:
+                    label = "PARENT"
+                elif parent_id:
+                    label = "reply (to " + parent_id + ")"
+                else:
+                    label = "context"
+                print(f"--- {ct.tweet_id} [{label}] @{ct.author_username} ---")
+                print(ct.text)
+                print()
+        else:
+            print("=== (no thread context in response) ===\n")
 
         note = raw.get("note_tweet", {}).get("note_tweet_results", {}).get("result", {})
         note_text = note.get("text")
