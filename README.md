@@ -596,6 +596,37 @@ uv run ruff format --check
 
 See [`docs/`](docs/README.md) for architecture docs, the implementation plan, and research notes.
 
+### Development utilities
+
+The `dev/` directory contains lightweight standalone scripts for ad-hoc inspection
+and debugging. These are **not** installed with the package — run them from a
+checkout with `uv run`.
+
+```
+python dev/fetch_tweet.py <tweet-url-or-id> [--cookies FILE]
+```
+Fetches a single tweet (and its full thread context) via the X `TweetDetail`
+GraphQL endpoint using the same client + extractor as the main package. Prints
+the tweet text, author, media, URLs, and any note-tweet body. If the response
+contains conversation tweets (parents/replies), they are rendered as an
+indented chronological tree. `--cookies` accepts a Netscape-format
+`cookies-x-com.txt` file (otherwise falls back to env vars).
+
+```
+python dev/grab_article.py <tweet-url-or-id> [--cookies FILE] [--out PATH]
+```
+Like `fetch_tweet.py` but renders an X Article as Markdown. Extracts the full
+article body via the package's article extractor, includes the author, publish
+date, article ID, and a metadata table, and optionally unfurls any linked
+external URL. Output defaults to `/tmp/xarticle_<id>.md`.
+
+```
+python convert_grailbird.py <input_dir> <output_dir>
+```
+Converts pre-2018 CSV-based Grailbird archives into the modern YTD
+(`window.YTD.*`) layout that `tweetxvault import x-archive` can ingest. See
+[`docs/GRAILBIRD.md`](docs/GRAILBIRD.md) for details.
+
 ## Similar projects
 
 - **[twitter-web-exporter](https://github.com/prinsss/twitter-web-exporter)** — Browser extension (Tampermonkey/Violentmonkey) that intercepts Twitter's GraphQL responses in-page; exports bookmarks, likes, tweets, followers, and DMs to JSON/CSV/HTML with bulk media download

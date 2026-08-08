@@ -29,6 +29,9 @@
   and full thread context (all conversation tweets from the TweetDetail response,
   labeled as PARENT vs reply). Added a chronological tree view
   (depth-indented by reply-chain distance from the focal tweet).
+- Documented dev scripts (`dev/fetch_tweet.py`, `dev/grab_article.py`,
+  `convert_grailbird.py`) in a new `README.md` Development utilities
+  subsection.
 - Cleaned up lint across both dev scripts (`dev/grab_article.py`,
   `dev/fetch_tweet.py`): resolved E402 (noqa on path-manipulated imports),
   E701 (inline statements), E501 (line length), B904 (raise from),
