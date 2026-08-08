@@ -27,7 +27,8 @@
   tweetxvault's own `TweetDetail` GraphQL client + extractor to fetch any tweet
   by URL or numeric ID and print its text, author, note-tweet body, media, URLs,
   and full thread context (all conversation tweets from the TweetDetail response,
-  labeled as PARENT vs reply). Complements `dev/grab_article.py`.
+  labeled as PARENT vs reply). Added a chronological tree view
+  (depth-indented by reply-chain distance from the focal tweet).
 - Cleaned up lint across both dev scripts (`dev/grab_article.py`,
   `dev/fetch_tweet.py`): resolved E402 (noqa on path-manipulated imports),
   E701 (inline statements), E501 (line length), B904 (raise from),

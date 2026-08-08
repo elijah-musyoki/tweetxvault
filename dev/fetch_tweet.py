@@ -115,22 +115,40 @@ async def run(tid: str, cookies_path: str | None) -> int:
         print(tweet.text)
         print()
 
-        # Show thread context if the response contains more than just the focal tweet
+        # Thread context: TweetDetail returns the full conversation. Detect threads
+        # via in_reply_to_status_id_str on each tweet's legacy dict.
         all_tweets = parse_tweet_detail_tweets(j)
         thread_tweets = [t for t in all_tweets if t.tweet_id != tweet.tweet_id]
         if thread_tweets:
-            print(f"=== Thread context ({len(thread_tweets)} additional tweets) ===")
-            for ct in thread_tweets:
+            # Build reply-chain depth for a tree view: walk from each tweet up
+            # through in_reply_to until we hit the focal tweet or a root.
+            by_id = {t.tweet_id: t for t in all_tweets}
+            focal_id = tweet.tweet_id
+
+            def _depth(tid: str, seen: set) -> int:
+                if tid in seen or tid not in by_id:
+                    return 0
+                seen.add(tid)
+                parent = (by_id[tid].raw_json.get("legacy") or {}).get("in_reply_to_status_id_str")
+                if not parent or parent == tid:
+                    return 0
+                return 1 + _depth(parent, seen)
+
+            depths = {t.tweet_id: _depth(t.tweet_id, set()) for t in thread_tweets}
+            # Sort by depth then created_at for a readable chronological tree
+            sorted_ctx = sorted(
+                thread_tweets, key=lambda t: (depths[t.tweet_id], t.created_at or "")
+            )
+            print(f"=== Thread ({len(thread_tweets)} additional tweets) ===")
+            for ct in sorted_ctx:
+                d = depths[ct.tweet_id]
+                indent = "  " * d
                 ct_legacy = ct.raw_json.get("legacy") or {}
                 parent_id = ct_legacy.get("in_reply_to_status_id_str")
-                if parent_id == tweet.tweet_id:
-                    label = "PARENT"
-                elif parent_id:
-                    label = "reply (to " + parent_id + ")"
-                else:
-                    label = "context"
-                print(f"--- {ct.tweet_id} [{label}] @{ct.author_username} ---")
-                print(ct.text)
+                tag = "PARENT" if parent_id == focal_id else "reply"
+                print(f"{indent}├── [{tag}] @{ct.author_username} {ct.created_at}")
+                for line in (ct.text or "").split("\n"):
+                    print(f"{indent}│   {line}")
                 print()
         else:
             print("=== (no thread context in response) ===\n")
