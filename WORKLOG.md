@@ -1,5 +1,28 @@
 # WORKLOG
 
+## 2026-08-08
+
+- Fixed article `canonical_url` extraction quirk in `tweetxvault/extractor.py`:
+  - real-world X article payloads (e.g. the Dimitris Papailiou `TweetDetail`
+    fixture at `tests/fixtures/dimitris_article_tweet_detail.json`) carry no
+    top-level `url`/`permalink`/`article_url` field, so the `_deep_first_string`
+    fallback was recursing into `content_state.entityMap` and picking up
+    unrelated emoji SVG URLs (`https://abs-0.twimg.com/emoji/v2/svg/1f60a.svg`)
+    as the article's canonical URL
+  - replaced the deep-search fallback with direct top-level field checks plus a
+    REST-ID construction fallback (`https://x.com/i/article/{rest_id}`) that
+    only fires when the REST ID is a numeric string (real X article IDs), so
+    synthetic test fixtures with non-numeric IDs are unaffected
+  - added regression test
+    `test_extract_secondary_objects_article_canonical_url_falls_back_to_rest_id`
+    in `tests/test_extractor.py`
+  - validated against the real article tweet via `dev/grab_article.py --cookies`
+    with the canonical URL now resolving to
+    `https://x.com/i/article/2026523085545857024` instead of the emoji URL
+  - `uv run ruff check` / `uv run ruff format --check` clean; full test suite
+    passes except for 3 pre-existing CLI help-text failures (Rich/Typer ANSI
+    code wrapping on hyphenated option names, unrelated to this change)
+
 ## 2026-07-21
 
 - Prepared release metadata for `v0.2.5`:

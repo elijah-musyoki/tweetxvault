@@ -419,3 +419,35 @@ def test_extracted_tweet_graph_merge_coalesces_url_url_ref_and_article_records()
     assert article.published_at == "2026-03-14T00:00:00+00:00"
     assert article.status == "body_present"
     assert article.raw_json == {"new": True}
+
+
+def test_extract_secondary_objects_article_canonical_url_falls_back_to_rest_id() -> None:
+    """When an article result has no top-level url/permalink field but its
+    content_state entityMap contains unrelated media URLs (e.g. emoji SVGs),
+    the canonical URL must fall back to the X article permalink, not pick up
+    entityMap URLs. Regression for the Dimitris Papailiou article fixture."""
+    article_result = {
+        "rest_id": "2026523085545857024",
+        "id": "QXJ0aWNsZUVudGl0eToyMDI2NTIzMDg1NTQ1ODU3MDI0",
+        "title": "You Don't Need to Run Every Eval",
+        "plain_text": "Article body text",
+        "metadata": {"first_published_at_secs": 1_742_003_200},
+        "content_state": {
+            "entityMap": {
+                "5": {"value": {"data": {"url": "https://abs-0.twimg.com/emoji/v2/svg/1f60a.svg"}}},
+                "6": {"value": {"data": {"url": "https://abs-0.twimg.com/emoji/v2/svg/1f60a.svg"}}},
+            },
+        },
+    }
+    root = make_tweet_result(
+        "100",
+        "tweet with article",
+        user_id="1000",
+        article=article_result,
+    )
+
+    graph = extract_secondary_objects(root)
+    article = graph.articles["100"]
+    assert article.canonical_url == "https://x.com/i/article/2026523085545857024"
+    assert "svg" not in article.canonical_url
+    assert article.content_text == "Article body text"

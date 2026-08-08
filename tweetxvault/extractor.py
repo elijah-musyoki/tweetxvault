@@ -682,14 +682,15 @@ def _article_entry(
             ),
         ),
     )
+    article_rest_id = article_result.get("rest_id")
     article_url = canonicalize_url(
         _coalesce(
             article_result.get("url"),
-            _deep_first_string(
-                article_result,
-                ("permalink", "article_url", "url"),
-                absolute_url_only=True,
-            ),
+            article_result.get("permalink"),
+            article_result.get("article_url"),
+            f"https://x.com/i/article/{article_rest_id}"
+            if isinstance(article_rest_id, str) and article_rest_id.isdigit()
+            else None,
         )
     )
     return ArticleData(
