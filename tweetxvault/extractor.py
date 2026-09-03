@@ -64,6 +64,14 @@ def _as_int(value: Any) -> int | None:
     return None
 
 
+def _article_permalink(rest_id: Any) -> str | None:
+    """Canonical X article URL — only for numeric rest_ids, else None."""
+    if rest_id is None:
+        return None
+    sid = str(rest_id)
+    return f"https://x.com/i/article/{sid}" if sid.isdigit() else None
+
+
 def unwrap_tweet_result(result: Any) -> dict[str, Any] | None:
     if not isinstance(result, dict):
         return None
@@ -682,15 +690,12 @@ def _article_entry(
             ),
         ),
     )
-    article_rest_id = article_result.get("rest_id")
     article_url = canonicalize_url(
         _coalesce(
             article_result.get("url"),
             article_result.get("permalink"),
             article_result.get("article_url"),
-            f"https://x.com/i/article/{article_rest_id}"
-            if isinstance(article_rest_id, str) and article_rest_id.isdigit()
-            else None,
+            _article_permalink(article_result.get("rest_id")),
         )
     )
     return ArticleData(
