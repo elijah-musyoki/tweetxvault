@@ -1314,10 +1314,12 @@ class ArchiveStore:
         *,
         source: str = LIVE_SOURCE,
         cursor: _PageBuffer,
+        graph: ExtractedTweetGraph | None = None,
     ) -> None:
-        graph = ExtractedTweetGraph()
-        for tweet in tweets:
-            graph.merge(extract_secondary_objects(tweet.raw_json))
+        if graph is None:
+            graph = ExtractedTweetGraph()
+            for tweet in tweets:
+                graph.merge(extract_secondary_objects(tweet.raw_json))
         self._buffer_secondary_graph(graph, source=source, cursor=cursor)
 
     def persist_page(
@@ -1344,6 +1346,33 @@ class ArchiveStore:
             source=LIVE_SOURCE,
             cursor=buffer,
         )
+        graph = ExtractedTweetGraph()
+        for tweet in tweets:
+            graph.merge(extract_secondary_objects(tweet.raw_json))
+        row_keys = [self._row_key_for_tweet(tweet.tweet_id, collection_type) for tweet in tweets]
+        row_keys.extend(
+            self._row_key_for_tweet_object(item.tweet_id) for item in graph.tweet_objects.values()
+        )
+        row_keys.extend(
+            self._row_key_for_tweet_relation(
+                item.source_tweet_id,
+                item.relation_type,
+                item.target_tweet_id,
+            )
+            for item in graph.relations.values()
+        )
+        row_keys.extend(
+            self._row_key_for_media(item.tweet_id, item.media_key) for item in graph.media.values()
+        )
+        row_keys.extend(self._row_key_for_url(item.url_hash) for item in graph.urls.values())
+        row_keys.extend(
+            self._row_key_for_url_ref(item.tweet_id, item.position)
+            for item in graph.url_refs.values()
+        )
+        row_keys.extend(
+            self._row_key_for_article(item.tweet_id) for item in graph.articles.values()
+        )
+        self.prefetch_rows(row_keys, cursor=buffer)
         for tweet in tweets:
             self.upsert_tweet(tweet, cursor=buffer)
             self.upsert_membership(
@@ -1353,7 +1382,7 @@ class ArchiveStore:
                 sort_index=tweet.sort_index,
                 cursor=buffer,
             )
-        self._buffer_secondary_objects(tweets, source=LIVE_SOURCE, cursor=buffer)
+        self._buffer_secondary_objects(tweets, source=LIVE_SOURCE, cursor=buffer, graph=graph)
         self.set_sync_state(
             collection_type,
             last_head_tweet_id=last_head_tweet_id,
