@@ -252,6 +252,38 @@ def test_prefetch_rows_populates_buffer_cache(paths) -> None:
     store.close()
 
 
+def test_persist_page_prefetches_row_keys(paths, monkeypatch: pytest.MonkeyPatch) -> None:
+    store = open_archive_store(paths, create=True)
+    assert store is not None
+
+    calls: list[list[str]] = []
+    original = store.prefetch_rows
+
+    def capture(row_keys: list[str], *, cursor: _PageBuffer) -> None:
+        calls.append(row_keys)
+        original(row_keys, cursor=cursor)
+
+    monkeypatch.setattr(store, "prefetch_rows", capture)
+    store.persist_page(
+        operation="Bookmarks",
+        collection_type="bookmark",
+        cursor_in=None,
+        cursor_out="cursor-1",
+        http_status=200,
+        raw_json={"ok": True},
+        tweets=[_complex_tweet()],
+        last_head_tweet_id="100",
+        backfill_cursor="cursor-1",
+        backfill_incomplete=True,
+    )
+
+    assert len(calls) == 1
+    assert "tweet:bookmark::100" in calls[0]
+    assert "tweet_object:100" in calls[0]
+    assert "article:100" in calls[0]
+    store.close()
+
+
 def test_persist_page_creates_single_version(paths) -> None:
     store = open_archive_store(paths, create=True)
     assert store is not None

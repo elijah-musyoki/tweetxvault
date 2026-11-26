@@ -1,5 +1,23 @@
 # WORKLOG
 
+## 2026-11-26
+
+- Fixed slow live sync caused by one-by-one archive lookups in `persist_page`:
+  - `prefetch_rows` existed but was only used by `archive_import`; live sync
+    built an empty `_PageBuffer` for each page, so every new row key fell through
+    to a separate `_get_row` query while filling the buffer.
+  - `persist_page` now collects row keys from the page tweets plus the extracted
+    secondary graph, then calls `prefetch_rows` before writing the batch.
+  - `_buffer_secondary_objects` accepts an optional prebuilt graph so extraction
+    is done once and the existing failure-injection test hook stays intact.
+  - Observed on a running backfill: roughly 11 minutes per page before the fix,
+    roughly 14 seconds per page after it, with CPU near 70% of one core instead
+    of 157% average. X request rate and page delay are unchanged.
+  - Validation run: `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` (198 passed),
+    `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check`, and
+    `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check`.
+  - Added `test_persist_page_prefetches_row_keys` in `tests/test_storage.py`.
+
 ## 2026-07-21
 
 - Prepared release metadata for `v0.2.5`:
