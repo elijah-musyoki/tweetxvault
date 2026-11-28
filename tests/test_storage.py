@@ -284,6 +284,32 @@ def test_persist_page_prefetches_row_keys(paths, monkeypatch: pytest.MonkeyPatch
     store.close()
 
 
+def test_persist_thread_detail_prefetches_graph_row_keys(
+    paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = open_archive_store(paths, create=True)
+    assert store is not None
+
+    calls: list[list[str]] = []
+    original = store.prefetch_rows
+
+    def capture(row_keys: list[str], *, cursor: _PageBuffer) -> None:
+        calls.append(row_keys)
+        original(row_keys, cursor=cursor)
+
+    monkeypatch.setattr(store, "prefetch_rows", capture)
+    store.persist_thread_detail(
+        focal_tweet_id="100",
+        tweets=[_complex_tweet("100")],
+        raw_json={"ok": True},
+    )
+
+    assert len(calls) == 1
+    assert "tweet_object:100" in calls[0]
+    assert "article:100" in calls[0]
+    store.close()
+
+
 def test_persist_page_creates_single_version(paths) -> None:
     store = open_archive_store(paths, create=True)
     assert store is not None

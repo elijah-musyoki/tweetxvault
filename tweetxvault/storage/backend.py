@@ -403,6 +403,32 @@ class ArchiveStore:
         for row_key in missing:
             cursor.existing_rows[row_key] = found.get(row_key)
 
+    def _row_keys_for_graph(self, graph: ExtractedTweetGraph) -> list[str]:
+        row_keys: list[str] = []
+        row_keys.extend(
+            self._row_key_for_tweet_object(item.tweet_id) for item in graph.tweet_objects.values()
+        )
+        row_keys.extend(
+            self._row_key_for_tweet_relation(
+                item.source_tweet_id,
+                item.relation_type,
+                item.target_tweet_id,
+            )
+            for item in graph.relations.values()
+        )
+        row_keys.extend(
+            self._row_key_for_media(item.tweet_id, item.media_key) for item in graph.media.values()
+        )
+        row_keys.extend(self._row_key_for_url(item.url_hash) for item in graph.urls.values())
+        row_keys.extend(
+            self._row_key_for_url_ref(item.tweet_id, item.position)
+            for item in graph.url_refs.values()
+        )
+        row_keys.extend(
+            self._row_key_for_article(item.tweet_id) for item in graph.articles.values()
+        )
+        return row_keys
+
     def _queue_record(self, record: dict[str, Any], *, cursor: _PageBuffer | None = None) -> None:
         if cursor is None:
             self._merge_records([record])
@@ -1708,12 +1734,10 @@ class ArchiveStore:
             source=LIVE_SOURCE,
             cursor=buffer,
         )
+        graph = extract_secondary_objects(tweet.raw_json)
+        self.prefetch_rows(self._row_keys_for_graph(graph), cursor=buffer)
         self._refresh_tweet_records_for_details([tweet], cursor=buffer)
-        self._buffer_secondary_graph(
-            extract_secondary_objects(tweet.raw_json),
-            source=LIVE_SOURCE,
-            cursor=buffer,
-        )
+        self._buffer_secondary_graph(graph, source=LIVE_SOURCE, cursor=buffer)
         if owns_buffer:
             self._merge_records(list(buffer.records.values()))
 
@@ -1737,12 +1761,10 @@ class ArchiveStore:
             source=LIVE_SOURCE,
             cursor=buffer,
         )
+        graph = extract_thread_objects([tweet.raw_json for tweet in tweets])
+        self.prefetch_rows(self._row_keys_for_graph(graph), cursor=buffer)
         self._refresh_tweet_records_for_details(tweets, cursor=buffer)
-        self._buffer_secondary_graph(
-            extract_thread_objects([tweet.raw_json for tweet in tweets]),
-            source=LIVE_SOURCE,
-            cursor=buffer,
-        )
+        self._buffer_secondary_graph(graph, source=LIVE_SOURCE, cursor=buffer)
         if owns_buffer:
             self._merge_records(list(buffer.records.values()))
 
